@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#fafaf7">
+<title>How Much Local — LA Toxicity Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #fafaf7;
+    --paper: #ffffff;
+    --ink: #1a1a1a;
+    --ink-soft: #5a5a5a;
+    --ink-faint: #8a8a8a;
+    --rule: #e5e3dc;
+    --rule-soft: #efede7;
+    --tint: #f5f3ec;
+    --safe: #2d5a3d;
+    --safe-bg: #e8f0eb;
+    --warn: #b8851f;
+    --warn-bg: #f7efdc;
+    --danger: #8b1a1a;
+    --danger-bg: #f4e3e3;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 400;
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+  }
+
+  .page {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 20px 18px 100px;
+  }
+
+  /* Header */
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 14px;
+    margin-bottom: 18px;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .logo {
+    font-family: 'Fraunces', serif;
+    font-size: 17px;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+  }
+  .logo em { font-style: italic; color: var(--danger); }
+
+  .reset-btn {
+    background: none;
+    border: 1px solid var(--rule);
+    padding: 6px 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  .reset-btn:active { background: var(--rule-soft); }
+
+  /* Step blocks */
+  .step { margin-bottom: 22px; }
+
+  .step-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .step-label::before {
+    content: counter(step) ;
+    counter-increment: step;
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    color: var(--danger);
+    font-size: 13px;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  body { counter-reset: step; }
+
+  /* Chip rows */
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .chip {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    padding: 12px 16px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--ink);
+    cursor: pointer;
+    border-radius: 8px;
+    min-height: 44px;
+    min-width: 56px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.12s;
+    user-select: none;
+  }
+  .chip:active { transform: scale(0.96); }
+  .chip.active {
+    background: var(--ink);
+    color: var(--bg);
+    border-color: var(--ink);
+  }
+
+  .chip-small {
+    padding: 8px 12px;
+    font-size: 13px;
+    min-height: 36px;
+    min-width: 0;
+  }
+
+  .chip-mono {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  /* Weight custom input */
+  .weight-custom {
+    display: inline-flex;
+    align-items: center;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    overflow: hidden;
+    min-height: 44px;
+  }
+  .weight-custom input {
+    width: 60px;
+    border: none;
+    text-align: center;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    background: transparent;
+    padding: 0 4px;
+    -moz-appearance: textfield;
+  }
+  .weight-custom input::-webkit-outer-spin-button,
+  .weight-custom input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .weight-custom input:focus { outline: none; }
+  .weight-custom .unit {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-faint);
+    padding-right: 12px;
+  }
+
+  /* Volume stepper */
+  .stepper {
+    display: inline-flex;
+    align-items: center;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .stepper button {
+    width: 44px;
+    height: 44px;
+    border: none;
+    background: var(--paper);
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--ink);
+    cursor: pointer;
+    font-family: 'Fraunces', serif;
+  }
+  .stepper button:active { background: var(--rule-soft); }
+  .stepper .vol-display {
+    min-width: 70px;
+    text-align: center;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    border-left: 1px solid var(--rule);
+    border-right: 1px solid var(--rule);
+    padding: 0 12px;
+    line-height: 44px;
+  }
+  .stepper .vol-unit {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-faint);
+    padding: 0 12px;
+  }
+
+  /* Doses given list */
+  .doses-given {
+    margin-top: 14px;
+  }
+  .dose-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--tint);
+    border: 1px solid var(--rule);
+    border-radius: 16px;
+    padding: 6px 10px 6px 12px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    margin-right: 6px;
+    margin-bottom: 6px;
+  }
+  .dose-pill .x {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--rule);
+    color: var(--ink-soft);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .dose-pill .x:active { background: var(--ink); color: var(--bg); }
+  .empty-given {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-faint);
+    padding: 4px 0;
+  }
+
+  /* Add dose grid */
+  .add-dose-grid {
+    display: grid;
+    gap: 10px;
+    padding: 14px;
+    background: var(--tint);
+    border-radius: 8px;
+    margin-top: 12px;
+  }
+  .add-dose-grid .sub-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 6px;
+  }
+
+  /* THE PRIMARY ANSWER — what's left */
+  .answer-card {
+    background: var(--paper);
+    border: 1px solid var(--ink);
+    border-radius: 12px;
+    padding: 22px 20px 18px;
+    margin: 8px 0 18px;
+  }
+  .answer-card.warn { border-color: var(--warn); }
+  .answer-card.danger { border-color: var(--danger); background: var(--danger-bg); }
+
+  .answer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+
+  .answer-eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .answer-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .light {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--safe);
+    box-shadow: 0 0 0 3px var(--safe-bg);
+  }
+  .light.warn { background: var(--warn); box-shadow: 0 0 0 3px var(--warn-bg); }
+  .light.danger { background: var(--danger); box-shadow: 0 0 0 3px var(--danger-bg); animation: pulse 1.5s infinite; }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 3px var(--danger-bg); }
+    50% { box-shadow: 0 0 0 6px rgba(139, 26, 26, 0.15); }
+  }
+
+  /* Remaining-per-drug grid */
+  .remaining-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .drug-card {
+    background: var(--tint);
+    border-radius: 8px;
+    padding: 14px;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+  }
+  .drug-card.zero {
+    background: rgba(139, 26, 26, 0.06);
+  }
+
+  .drug-name {
+    font-family: 'Fraunces', serif;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 6px;
+    color: var(--ink-soft);
+  }
+
+  .drug-mg {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 32px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    margin-bottom: 2px;
+  }
+  .drug-mg .unit {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 300;
+    font-size: 16px;
+    color: var(--ink-soft);
+    margin-left: 4px;
+  }
+  .drug-card.zero .drug-mg { color: var(--danger); }
+
+  .drug-vols {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+    margin-top: 6px;
+  }
+  .drug-vols .vol-row {
+    display: flex;
+    justify-content: space-between;
+  }
+  .drug-vols .vol-row .conc { color: var(--ink-faint); }
+
+  /* Cumulative meter */
+  .cumulative {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--rule-soft);
+  }
+  .cumulative-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+  }
+  .cumulative-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .cumulative-value {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+  }
+  .cumulative-value.warn { color: var(--warn); }
+  .cumulative-value.danger { color: var(--danger); }
+  .meter-bar {
+    height: 4px;
+    background: var(--rule-soft);
+    position: relative;
+    overflow: hidden;
+    border-radius: 2px;
+  }
+  .meter-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    background: var(--safe);
+    transition: width 0.4s ease, background 0.3s;
+  }
+  .meter-fill.warn { background: var(--warn); }
+  .meter-fill.danger { background: var(--danger); }
+
+  /* Empty state for answer card */
+  .answer-empty {
+    text-align: center;
+    padding: 18px 0;
+    color: var(--ink-faint);
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 15px;
+  }
+
+  /* LAST rescue FAB */
+  .last-fab {
+    position: fixed;
+    bottom: 18px;
+    right: 18px;
+    background: var(--danger);
+    color: white;
+    border: none;
+    border-radius: 999px;
+    padding: 14px 20px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    font-weight: 600;
+    box-shadow: 0 4px 16px rgba(139, 26, 26, 0.3);
+    cursor: pointer;
+    z-index: 100;
+  }
+  .last-fab:active { transform: scale(0.95); }
+
+  /* LAST overlay */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(26, 26, 26, 0.6);
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 200;
+    backdrop-filter: blur(4px);
+  }
+  .overlay.open { display: flex; }
+  .overlay-card {
+    background: var(--paper);
+    width: 100%;
+    max-width: 640px;
+    max-height: 85vh;
+    overflow-y: auto;
+    border-radius: 16px 16px 0 0;
+    padding: 22px;
+    animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  .overlay-title {
+    font-family: 'Fraunces', serif;
+    font-size: 24px;
+    font-weight: 400;
+    color: var(--danger);
+    margin-bottom: 4px;
+  }
+  .overlay-sub {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-bottom: 18px;
+  }
+  .rescue-block {
+    background: var(--danger-bg);
+    border-left: 3px solid var(--danger);
+    padding: 14px 16px;
+    border-radius: 4px;
+    margin-bottom: 14px;
+  }
+  .rescue-step-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--danger);
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+  .rescue-title {
+    font-family: 'Fraunces', serif;
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: 6px;
+  }
+  .rescue-dose {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .rescue-note {
+    font-size: 13px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+  .overlay-close {
+    width: 100%;
+    background: var(--ink);
+    color: var(--bg);
+    border: none;
+    padding: 14px;
+    border-radius: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-top: 8px;
+    cursor: pointer;
+  }
+
+  /* Reset confirm */
+  .reset-confirm {
+    position: fixed;
+    inset: 0;
+    background: rgba(26,26,26,0.4);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 300;
+    backdrop-filter: blur(2px);
+  }
+  .reset-confirm.open { display: flex; }
+  .reset-confirm-card {
+    background: var(--paper);
+    padding: 24px;
+    border-radius: 12px;
+    max-width: 320px;
+    text-align: center;
+  }
+  .reset-confirm-card p {
+    font-family: 'Fraunces', serif;
+    font-size: 17px;
+    margin-bottom: 18px;
+  }
+  .reset-confirm-card .row {
+    display: flex;
+    gap: 10px;
+  }
+  .reset-confirm-card button {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .reset-confirm-card .yes { background: var(--danger); color: white; }
+  .reset-confirm-card .no { background: var(--rule-soft); color: var(--ink); }
+
+  .footnote {
+    margin-top: 28px;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule);
+    font-size: 11px;
+    color: var(--ink-faint);
+    line-height: 1.6;
+  }
+  .footnote em { color: var(--ink-soft); font-style: italic; }
+  .footnote p { margin-bottom: 10px; }
+  .footnote p:last-child { margin-bottom: 0; }
+  .footnote strong { color: var(--ink-soft); font-weight: 600; }
+
+  .footnote .refs {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    line-height: 1.7;
+    letter-spacing: 0.01em;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--rule);
+  }
+  .footnote .refs strong {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    display: inline-block;
+    margin-bottom: 6px;
+  }
+  .footnote .refs a {
+    color: var(--ink);
+    text-decoration: none;
+    border-bottom: 1px solid var(--rule);
+    transition: border-color 0.15s;
+  }
+  .footnote .refs a:hover { border-color: var(--danger); color: var(--danger); }
+  .footnote .refs em { font-family: 'Fraunces', serif; font-style: italic; font-size: 11px; }
+
+  .footnote .attribution {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--rule);
+    font-family: 'Fraunces', serif;
+    font-size: 13px;
+    font-style: italic;
+    color: var(--ink-soft);
+    text-align: center;
+    line-height: 1.7;
+  }
+  .footnote .attribution strong {
+    font-family: 'Fraunces', serif;
+    font-style: normal;
+    font-weight: 500;
+    color: var(--ink);
+    letter-spacing: 0;
+    text-transform: none;
+    font-size: 14px;
+  }
+  .footnote .attribution a {
+    font-family: 'IBM Plex Mono', monospace;
+    font-style: normal;
+    font-size: 11px;
+    color: var(--ink-faint);
+    text-decoration: none;
+    letter-spacing: 0.02em;
+  }
+  .footnote .attribution a:hover { color: var(--danger); }
+
+  /* Mobile-specific tweaks */
+  @media (max-width: 400px) {
+    .remaining-grid { grid-template-columns: 1fr; }
+    .drug-mg { font-size: 28px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <header>
+    <div class="logo">How Much <em>Local</em>?</div>
+    <button class="reset-btn" id="resetBtn">Reset</button>
+  </header>
+
+  <!-- Step 1: Weight -->
+  <div class="step">
+    <div class="step-label">Weight</div>
+    <div class="chips" id="weightChips">
+      <button class="chip" data-w="50">50</button>
+      <button class="chip" data-w="60">60</button>
+      <button class="chip" data-w="70">70</button>
+      <button class="chip" data-w="80">80</button>
+      <button class="chip" data-w="90">90</button>
+      <button class="chip" data-w="100">100</button>
+      <button class="chip" data-w="110">110</button>
+      <div class="weight-custom">
+        <input type="number" id="weightCustom" placeholder="—" min="1" max="250" step="0.5" inputmode="decimal">
+        <span class="unit">kg</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2: What's been given -->
+  <div class="step">
+    <div class="step-label">Already given</div>
+
+    <div class="doses-given" id="dosesGiven">
+      <div class="empty-given">No doses logged.</div>
+    </div>
+
+    <div class="add-dose-grid">
+      <div>
+        <div class="sub-label">Agent</div>
+        <div class="chips" id="drugChips">
+          <button class="chip chip-small" data-drug="lidocaine">Lignocaine</button>
+          <button class="chip chip-small" data-drug="bupivacaine">Bupivacaine</button>
+          <button class="chip chip-small" data-drug="ropivacaine">Ropivacaine</button>
+          <button class="chip chip-small" data-drug="levobupivacaine">Levobupi</button>
+        </div>
+      </div>
+      <div>
+        <div class="sub-label">Concentration</div>
+        <div class="chips" id="concChips">
+          <div style="font-size:12px;color:var(--ink-faint);font-style:italic;font-family:Fraunces,serif;">Pick an agent first.</div>
+        </div>
+      </div>
+      <div>
+        <div class="sub-label">Volume</div>
+        <div class="stepper">
+          <button id="volMinus">−</button>
+          <div class="vol-display"><span id="volDisplay">20</span></div>
+          <span class="vol-unit">mL</span>
+          <button id="volPlus">+</button>
+        </div>
+      </div>
+      <button class="chip" id="addDoseBtn" style="margin-top:6px; background:var(--ink); color:var(--bg); border-color:var(--ink); opacity:0.4; pointer-events:none;">Add dose</button>
+    </div>
+  </div>
+
+  <!-- THE ANSWER — what's left -->
+  <div class="step">
+    <div class="step-label">What you have left</div>
+    <div class="answer-card" id="answerCard">
+      <div class="answer-empty" id="answerEmpty">Enter weight to see remaining headroom.</div>
+
+      <div id="answerBody" style="display:none;">
+        <div class="answer-header">
+          <div class="answer-eyebrow">Headroom — 80% cap</div>
+          <div class="answer-status">
+            <span class="light" id="statusLight"></span>
+            <span id="statusText">Within safe range</span>
+          </div>
+        </div>
+
+        <div class="remaining-grid" id="remainingGrid"></div>
+
+        <div class="cumulative">
+          <div class="cumulative-row">
+            <span class="cumulative-label">Cumulative load</span>
+            <span class="cumulative-value" id="cumValue">0% of max</span>
+          </div>
+          <div class="meter-bar">
+            <div class="meter-fill" id="meterFill" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footnote">
+    <p><strong>Method.</strong> Additive fractional toxicity ∑(dose ÷ max dose) ≤ 1, with safety cap at 80% of theoretical maximum. Conservative adult mg/kg limits (plain solutions, lean body weight): lignocaine 4.5, bupivacaine 2, ropivacaine 3, levobupivacaine 2.</p>
+    <p><strong>Caveats.</strong> <em>Reduce further in elderly, frail, hepatic/cardiac disease, pregnancy, acidosis, hypoalbuminaemia, fascial plane blocks with large volumes, repeated blocks, or concomitant IV lignocaine infusion. The fractional model is intentionally simplistic — bupivacaine is substantially more cardiotoxic per mg than lignocaine. Bedside aid only; not a substitute for clinical judgement.</em></p>
+
+    <p class="refs">
+      <strong>References</strong><br>
+      <a href="https://pubmed.ncbi.nlm.nih.gov/15635516/" target="_blank" rel="noopener">Rosenberg PH, Veering BT, Urmey WF.</a> Maximum recommended doses of local anesthetics: a multifactorial concept. <em>Reg Anesth Pain Med</em> 2004;29(6):564–75.<br>
+      <a href="https://pubmed.ncbi.nlm.nih.gov/33148630/" target="_blank" rel="noopener">Neal JM, Neal EJ, Weinberg GL.</a> ASRA Local Anesthetic Systemic Toxicity checklist: 2020 version. <em>Reg Anesth Pain Med</em> 2021;46(1):81–82.<br>
+      <a href="https://pubmed.ncbi.nlm.nih.gov/29356773/" target="_blank" rel="noopener">Neal JM, Barrington MJ, Fettiplace MR, et al.</a> The Third ASRA Practice Advisory on LAST: Executive Summary 2017. <em>Reg Anesth Pain Med</em> 2018;43(2):113–23.<br>
+      <a href="https://anaesthetists.org/Home/Resources-publications/Guidelines/Management-of-severe-local-anaesthetic-toxicity-2023" target="_blank" rel="noopener">Association of Anaesthetists.</a> Management of Severe Local Anaesthetic Toxicity, 2023 update (QRH 3-10).<br>
+      <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC5821502/" target="_blank" rel="noopener">El-Boghdadly K, Pawa A, Chin KJ.</a> Local anesthetic systemic toxicity: current perspectives. <em>Local Reg Anesth</em> 2018;11:35–44.
+    </p>
+
+    <p class="attribution">
+      Created by <strong>Dr AGP van Zyl</strong> · Specialist Anaesthesiologist<br>
+      <a href="https://github.com/agpvz/howmuchlocal" target="_blank" rel="noopener">github.com/agpvz/howmuchlocal</a>
+    </p>
+  </div>
+
+</div>
+
+<button class="last-fab" id="lastFab">LAST RESCUE</button>
+
+<div class="overlay" id="lastOverlay">
+  <div class="overlay-card">
+    <div class="overlay-title">LAST — Lipid Rescue</div>
+    <div class="overlay-sub">Local Anaesthetic Systemic Toxicity · <a href="https://pubmed.ncbi.nlm.nih.gov/33148630/" target="_blank" rel="noopener" style="color:var(--ink-soft);">ASRA 2020 checklist</a> · for adult patient</div>
+
+    <div class="rescue-block">
+      <div class="rescue-step-num">STEP 1 · IMMEDIATE</div>
+      <div class="rescue-title">Stop LA injection. Call for help.</div>
+      <div class="rescue-note">Airway: 100% O₂, manage seizures (benzodiazepine; avoid propofol if cardiovascular instability). Get lipid emulsion to bedside.</div>
+    </div>
+
+    <div class="rescue-block">
+      <div class="rescue-step-num">STEP 2 · LIPID 20%</div>
+      <div class="rescue-title">Bolus</div>
+      <div class="rescue-dose">1.5 mL/kg lean body weight over 2–3 min</div>
+      <div class="rescue-note">For this patient: <strong id="bolusVol">enter weight first</strong>. Repeat bolus 1–2× for persistent cardiovascular collapse.</div>
+    </div>
+
+    <div class="rescue-block">
+      <div class="rescue-step-num">STEP 3 · INFUSION</div>
+      <div class="rescue-title">Continuous</div>
+      <div class="rescue-dose">0.25 mL/kg/min</div>
+      <div class="rescue-note">For this patient: <strong id="infusionRate">enter weight first</strong>. Double to 0.5 mL/kg/min if BP remains low. Continue ≥10 min after circulatory stability. Maximum cumulative ≈12 mL/kg.</div>
+    </div>
+
+    <div class="rescue-block">
+      <div class="rescue-step-num">STEP 4 · CARDIAC ARREST</div>
+      <div class="rescue-title">Modified ACLS</div>
+      <div class="rescue-note">Reduce adrenaline to <strong>≤1 µg/kg boluses</strong>. Avoid vasopressin, calcium channel blockers, β-blockers, lignocaine. Prolonged CPR may be needed — consider ECMO/cardiopulmonary bypass.</div>
+    </div>
+
+    <button class="overlay-close" id="overlayClose">Close</button>
+  </div>
+</div>
+
+<div class="reset-confirm" id="resetConfirm">
+  <div class="reset-confirm-card">
+    <p>Clear all entries?</p>
+    <div class="row">
+      <button class="no" id="resetNo">Cancel</button>
+      <button class="yes" id="resetYes">Reset</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const MAX_DOSE = {
+    lidocaine: 4.5,
+    bupivacaine: 2.0,
+    ropivacaine: 3.0,
+    levobupivacaine: 2.0
+  };
+
+  const DISPLAY = {
+    lidocaine: 'Lignocaine',
+    bupivacaine: 'Bupivacaine',
+    ropivacaine: 'Ropivacaine',
+    levobupivacaine: 'Levobupi'
+  };
+
+  const CONCS = {
+    lidocaine: [0.5, 1, 2],
+    bupivacaine: [0.125, 0.25, 0.5],
+    ropivacaine: [0.2, 0.375, 0.5, 0.75],
+    levobupivacaine: [0.25, 0.5]
+  };
+
+  // Most commonly stocked concentrations (used for headroom volume display)
+  const DISPLAY_CONCS = {
+    lidocaine: [1, 2],
+    bupivacaine: [0.25, 0.5],
+    ropivacaine: [0.2, 0.5],
+    levobupivacaine: [0.5]
+  };
+
+  const SAFETY_CAP = 0.8;
+  const STORAGE_KEY = 'howmuchlocal_v3';
+
+  let state = {
+    weight: null,
+    pendingDrug: null,
+    pendingConc: null,
+    pendingVol: 20,
+    doses: []
+  };
+
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) state = { ...state, ...JSON.parse(saved) };
+  } catch(e) {}
+
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
+  }
+
+  const $ = id => document.getElementById(id);
+  const concToMgMl = c => c * 10;
+
+  function totalFraction() {
+    if (!state.weight) return 0;
+    const totals = {};
+    state.doses.forEach(d => { totals[d.drug] = (totals[d.drug]||0) + d.mg; });
+    let f = 0;
+    Object.keys(totals).forEach(drug => {
+      const maxMg = MAX_DOSE[drug] * state.weight;
+      f += totals[drug] / maxMg;
+    });
+    return f;
+  }
+
+  function statusLevel(frac) {
+    const pctOfCap = frac / SAFETY_CAP;
+    if (pctOfCap < 0.7) return 'safe';
+    if (pctOfCap < 1.0) return 'warn';
+    return 'danger';
+  }
+
+  function renderWeight() {
+    document.querySelectorAll('#weightChips .chip').forEach(c => {
+      c.classList.toggle('active', parseFloat(c.dataset.w) === state.weight);
+    });
+    const customInput = $('weightCustom');
+    const presetWeights = [50,60,70,80,90,100,110];
+    if (state.weight && !presetWeights.includes(state.weight)) {
+      if (document.activeElement !== customInput) customInput.value = state.weight;
+    } else if (!state.weight) {
+      customInput.value = '';
+    }
+  }
+
+  function renderConcChips() {
+    const container = $('concChips');
+    if (!state.pendingDrug) {
+      container.innerHTML = '<div style="font-size:12px;color:var(--ink-faint);font-style:italic;font-family:Fraunces,serif;">Pick an agent first.</div>';
+      return;
+    }
+    container.innerHTML = CONCS[state.pendingDrug].map(c =>
+      `<button class="chip chip-small chip-mono" data-c="${c}">${c}%</button>`
+    ).join('');
+    container.querySelectorAll('.chip').forEach(chip => {
+      const c = parseFloat(chip.dataset.c);
+      chip.classList.toggle('active', c === state.pendingConc);
+      chip.addEventListener('click', () => {
+        state.pendingConc = c; save(); renderAddDose();
+      });
+    });
+  }
+
+  function renderAddDose() {
+    document.querySelectorAll('#drugChips .chip').forEach(c => {
+      c.classList.toggle('active', c.dataset.drug === state.pendingDrug);
+    });
+    renderConcChips();
+    $('volDisplay').textContent = state.pendingVol;
+
+    const canAdd = state.pendingDrug && state.pendingConc && state.pendingVol > 0;
+    const btn = $('addDoseBtn');
+    btn.style.opacity = canAdd ? '1' : '0.4';
+    btn.style.pointerEvents = canAdd ? 'auto' : 'none';
+  }
+
+  function renderDoses() {
+    const el = $('dosesGiven');
+    if (state.doses.length === 0) {
+      el.innerHTML = '<div class="empty-given">No doses logged.</div>';
+    } else {
+      el.innerHTML = state.doses.map((d, i) =>
+        `<div class="dose-pill">${DISPLAY[d.drug]} · ${d.vol}mL ${d.conc}% · ${d.mg.toFixed(0)}mg <span class="x" data-i="${i}">×</span></div>`
+      ).join('');
+      el.querySelectorAll('.x').forEach(x => {
+        x.addEventListener('click', e => {
+          e.stopPropagation();
+          state.doses.splice(parseInt(x.dataset.i), 1);
+          save(); renderAll();
+        });
+      });
+    }
+  }
+
+  function renderAnswer() {
+    const empty = $('answerEmpty');
+    const body = $('answerBody');
+    const card = $('answerCard');
+
+    if (!state.weight) {
+      empty.style.display = 'block';
+      empty.textContent = 'Enter weight to see remaining headroom.';
+      body.style.display = 'none';
+      card.className = 'answer-card';
+      return;
+    }
+
+    empty.style.display = 'none';
+    body.style.display = 'block';
+
+    const frac = totalFraction();
+    const level = statusLevel(frac);
+    const remainingFraction = Math.max(0, SAFETY_CAP - frac);
+
+    // Card border
+    card.className = 'answer-card' + (level === 'warn' ? ' warn' : '') + (level === 'danger' ? ' danger' : '');
+
+    // Status light
+    $('statusLight').className = 'light ' + (level === 'warn' ? 'warn' : level === 'danger' ? 'danger' : '');
+    $('statusText').textContent =
+      level === 'safe' ? 'Within safe range' :
+      level === 'warn' ? 'Approaching cap' :
+      'Cap exceeded';
+
+    // Cumulative meter
+    const pctOfMax = frac * 100;
+    const pctOfCap = Math.min((frac / SAFETY_CAP) * 100, 100);
+    $('cumValue').textContent = `${pctOfMax.toFixed(0)}% of max`;
+    $('cumValue').className = 'cumulative-value' + (level === 'warn' ? ' warn' : '') + (level === 'danger' ? ' danger' : '');
+    $('meterFill').style.width = pctOfCap + '%';
+    $('meterFill').className = 'meter-fill' + (level === 'warn' ? ' warn' : '') + (level === 'danger' ? ' danger' : '');
+
+    // Drug cards — what's left for each
+    $('remainingGrid').innerHTML = ['lidocaine','bupivacaine','ropivacaine','levobupivacaine'].map(drug => {
+      const maxMg = MAX_DOSE[drug] * state.weight;
+      const remainingMg = remainingFraction * maxMg;
+      const zero = remainingMg <= 0;
+      const concs = DISPLAY_CONCS[drug];
+      const volRows = concs.map(c => {
+        if (zero) return `<div class="vol-row"><span class="conc">${c}%</span><span>—</span></div>`;
+        const mL = remainingMg / concToMgMl(c);
+        return `<div class="vol-row"><span class="conc">${c}%</span><span>${mL.toFixed(mL < 10 ? 1 : 0)} mL</span></div>`;
+      }).join('');
+      return `
+        <div class="drug-card ${zero?'zero':''}">
+          <div class="drug-name">${DISPLAY[drug]}</div>
+          <div class="drug-mg">${Math.max(0,remainingMg).toFixed(0)}<span class="unit">mg left</span></div>
+          <div class="drug-vols">${volRows}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderRescue() {
+    if (state.weight) {
+      $('bolusVol').textContent = `${(1.5 * state.weight).toFixed(0)} mL bolus`;
+      $('infusionRate').textContent = `${(0.25 * state.weight).toFixed(1)} mL/min infusion`;
+    } else {
+      $('bolusVol').textContent = 'enter weight first';
+      $('infusionRate').textContent = 'enter weight first';
+    }
+  }
+
+  function renderAll() {
+    renderWeight();
+    renderAddDose();
+    renderDoses();
+    renderAnswer();
+    renderRescue();
+  }
+
+  // Weight chips
+  document.querySelectorAll('#weightChips .chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      state.weight = parseFloat(chip.dataset.w);
+      $('weightCustom').value = '';
+      save(); renderAll();
+    });
+  });
+
+  $('weightCustom').addEventListener('input', e => {
+    const v = parseFloat(e.target.value);
+    state.weight = isNaN(v) || v <= 0 ? null : v;
+    save(); renderAll();
+  });
+
+  // Drug chips (for pending dose)
+  document.querySelectorAll('#drugChips .chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const drug = chip.dataset.drug;
+      state.pendingDrug = drug;
+      const defaults = { lidocaine: 1, bupivacaine: 0.5, ropivacaine: 0.5, levobupivacaine: 0.5 };
+      state.pendingConc = defaults[drug];
+      save(); renderAddDose();
+    });
+  });
+
+  // Volume stepper
+  function adjustVol(delta) {
+    state.pendingVol = Math.max(0.5, Math.min(200, state.pendingVol + delta));
+    save();
+    $('volDisplay').textContent = state.pendingVol;
+    renderAddDose();
+  }
+  $('volMinus').addEventListener('click', () => adjustVol(-1));
+  $('volPlus').addEventListener('click', () => adjustVol(1));
+
+  let pressTimer, accelInterval;
+  function startAccel(delta) {
+    pressTimer = setTimeout(() => {
+      accelInterval = setInterval(() => adjustVol(delta), 80);
+    }, 400);
+  }
+  function stopAccel() {
+    clearTimeout(pressTimer);
+    clearInterval(accelInterval);
+  }
+  ['mousedown','touchstart'].forEach(evt => {
+    $('volMinus').addEventListener(evt, () => startAccel(-1));
+    $('volPlus').addEventListener(evt, () => startAccel(1));
+  });
+  ['mouseup','mouseleave','touchend','touchcancel'].forEach(evt => {
+    $('volMinus').addEventListener(evt, stopAccel);
+    $('volPlus').addEventListener(evt, stopAccel);
+  });
+
+  // Add dose
+  $('addDoseBtn').addEventListener('click', () => {
+    if (!state.pendingDrug || !state.pendingConc || !state.pendingVol) return;
+    const mg = state.pendingVol * concToMgMl(state.pendingConc);
+    state.doses.push({
+      drug: state.pendingDrug,
+      vol: state.pendingVol,
+      conc: state.pendingConc,
+      mg
+    });
+    // Reset pending for next entry
+    state.pendingDrug = null;
+    state.pendingConc = null;
+    state.pendingVol = 20;
+    save(); renderAll();
+  });
+
+  // Reset
+  $('resetBtn').addEventListener('click', () => {
+    $('resetConfirm').classList.add('open');
+  });
+  $('resetNo').addEventListener('click', () => {
+    $('resetConfirm').classList.remove('open');
+  });
+  $('resetYes').addEventListener('click', () => {
+    state = { weight: null, pendingDrug: null, pendingConc: null, pendingVol: 20, doses: [] };
+    save();
+    $('resetConfirm').classList.remove('open');
+    renderAll();
+  });
+
+  // LAST overlay
+  $('lastFab').addEventListener('click', () => $('lastOverlay').classList.add('open'));
+  $('overlayClose').addEventListener('click', () => $('lastOverlay').classList.remove('open'));
+  $('lastOverlay').addEventListener('click', e => {
+    if (e.target.id === 'lastOverlay') $('lastOverlay').classList.remove('open');
+  });
+
+  renderAll();
+</script>
+
+</body>
+</html>
