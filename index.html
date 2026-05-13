@@ -83,7 +83,7 @@
     border-left: 3px solid var(--warn);
     border-radius: 8px;
     padding: 12px 14px;
-    margin-bottom: 22px;
+    margin: 22px 0;
     display: flex;
     gap: 12px;
     align-items: flex-start;
@@ -314,6 +314,23 @@
     color: var(--ink-faint);
     margin-bottom: 6px;
   }
+
+  /* Cap selector */
+  .cap-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .cap-row .cap-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    flex-shrink: 0;
+  }
+  .cap-row .chips { gap: 6px; }
 
   /* THE PRIMARY ANSWER — what's left */
   .answer-card {
@@ -711,15 +728,6 @@
     <button class="reset-btn" id="resetBtn">Reset</button>
   </header>
 
-  <!-- Disclaimer -->
-  <div class="disclaimer" role="note" aria-label="Disclaimer">
-    <div class="disclaimer-mark">!</div>
-    <div class="disclaimer-body">
-      <div class="disclaimer-title">Not medical advice</div>
-      This tool is a <strong>bedside aid for qualified clinicians</strong> and does not replace clinical judgement, local guidelines, or product information. Verify every figure independently. Reduce limits for elderly, frail, hepatic/cardiac disease, pregnancy, acidosis, or hypoalbuminaemia. <strong>You remain responsible for every dose you give.</strong>
-    </div>
-  </div>
-
   <!-- Step 1: Weight -->
   <div class="step">
     <div class="step-label">Weight</div>
@@ -778,12 +786,20 @@
   <!-- THE ANSWER — what's left -->
   <div class="step">
     <div class="step-label">What you have left</div>
+    <div class="cap-row">
+      <span class="cap-label">Cap</span>
+      <div class="chips" id="capChips">
+        <button class="chip chip-small chip-mono" data-cap="0.8">80%</button>
+        <button class="chip chip-small chip-mono" data-cap="0.9">90%</button>
+        <button class="chip chip-small chip-mono" data-cap="1">Max</button>
+      </div>
+    </div>
     <div class="answer-card" id="answerCard">
       <div class="answer-empty" id="answerEmpty">Enter weight to see remaining headroom.</div>
 
       <div id="answerBody" style="display:none;">
         <div class="answer-header">
-          <div class="answer-eyebrow">Headroom — 80% cap</div>
+          <div class="answer-eyebrow" id="capEyebrow">Headroom — 80% cap</div>
           <div class="answer-status">
             <span class="light" id="statusLight"></span>
             <span id="statusText">Within safe range</span>
@@ -805,8 +821,17 @@
     </div>
   </div>
 
+  <!-- Disclaimer -->
+  <div class="disclaimer" role="note" aria-label="Disclaimer">
+    <div class="disclaimer-mark">!</div>
+    <div class="disclaimer-body">
+      <div class="disclaimer-title">Not medical advice</div>
+      This tool is a <strong>bedside aid for qualified clinicians</strong> and does not replace clinical judgement, local guidelines, or product information. Verify every figure independently. Reduce limits for elderly, frail, hepatic/cardiac disease, pregnancy, acidosis, or hypoalbuminaemia. <strong>You remain responsible for every dose you give.</strong>
+    </div>
+  </div>
+
   <div class="footnote">
-    <p><strong>Method.</strong> Additive fractional toxicity ∑(dose ÷ max dose) ≤ 1, with safety cap at 80% of theoretical maximum. Conservative adult mg/kg limits (plain solutions, lean body weight): lignocaine 4.5, bupivacaine 2, ropivacaine 3, levobupivacaine 2.</p>
+    <p><strong>Method.</strong> Additive fractional toxicity ∑(dose ÷ max dose) ≤ 1, with a user-selectable safety cap (80% default, 90%, or the theoretical maximum). Conservative adult mg/kg limits (plain solutions, lean body weight): lignocaine 4.5, bupivacaine 2, ropivacaine 3, levobupivacaine 2.</p>
     <p><strong>Caveats.</strong> <em>Reduce further in elderly, frail, hepatic/cardiac disease, pregnancy, acidosis, hypoalbuminaemia, fascial plane blocks with large volumes, repeated blocks, or concomitant IV lignocaine infusion. The fractional model is intentionally simplistic — bupivacaine is substantially more cardiotoxic per mg than lignocaine. Bedside aid only; not a substitute for clinical judgement.</em></p>
 
     <p class="refs">
@@ -903,7 +928,6 @@
     levobupivacaine: [0.5]
   };
 
-  const SAFETY_CAP = 0.8;
   const STORAGE_KEY = 'howmuchlocal_v3';
 
   let state = {
@@ -911,7 +935,8 @@
     pendingDrug: null,
     pendingConc: null,
     pendingVol: 20,
-    doses: []
+    doses: [],
+    safetyCap: 0.8
   };
 
   try {
@@ -939,10 +964,20 @@
   }
 
   function statusLevel(frac) {
-    const pctOfCap = frac / SAFETY_CAP;
+    const pctOfCap = frac / state.safetyCap;
     if (pctOfCap < 0.7) return 'safe';
     if (pctOfCap < 1.0) return 'warn';
     return 'danger';
+  }
+
+  function capLabel() {
+    return state.safetyCap >= 1 ? 'Max (100%)' : `${Math.round(state.safetyCap * 100)}% cap`;
+  }
+
+  function renderCap() {
+    document.querySelectorAll('#capChips .chip').forEach(chip => {
+      chip.classList.toggle('active', parseFloat(chip.dataset.cap) === state.safetyCap);
+    });
   }
 
   function renderWeight() {
@@ -1025,7 +1060,8 @@
 
     const frac = totalFraction();
     const level = statusLevel(frac);
-    const remainingFraction = Math.max(0, SAFETY_CAP - frac);
+    const remainingFraction = Math.max(0, state.safetyCap - frac);
+    $('capEyebrow').textContent = `Headroom — ${capLabel()}`;
 
     // Card border
     card.className = 'answer-card' + (level === 'warn' ? ' warn' : '') + (level === 'danger' ? ' danger' : '');
@@ -1039,7 +1075,7 @@
 
     // Cumulative meter
     const pctOfMax = frac * 100;
-    const pctOfCap = Math.min((frac / SAFETY_CAP) * 100, 100);
+    const pctOfCap = Math.min((frac / state.safetyCap) * 100, 100);
     $('cumValue').textContent = `${pctOfMax.toFixed(0)}% of max`;
     $('cumValue').className = 'cumulative-value' + (level === 'warn' ? ' warn' : '') + (level === 'danger' ? ' danger' : '');
     $('meterFill').style.width = pctOfCap + '%';
@@ -1080,9 +1116,18 @@
     renderWeight();
     renderAddDose();
     renderDoses();
+    renderCap();
     renderAnswer();
     renderRescue();
   }
+
+  // Cap chips
+  document.querySelectorAll('#capChips .chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      state.safetyCap = parseFloat(chip.dataset.cap);
+      save(); renderAll();
+    });
+  });
 
   // Weight chips
   document.querySelectorAll('#weightChips .chip').forEach(chip => {
@@ -1164,7 +1209,7 @@
     $('resetConfirm').classList.remove('open');
   });
   $('resetYes').addEventListener('click', () => {
-    state = { weight: null, pendingDrug: null, pendingConc: null, pendingVol: 20, doses: [] };
+    state = { weight: null, pendingDrug: null, pendingConc: null, pendingVol: 20, doses: [], safetyCap: 0.8 };
     save();
     $('resetConfirm').classList.remove('open');
     renderAll();
