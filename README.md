@@ -20,14 +20,16 @@ State persists in `localStorage` — close the tab, reopen, the case is still th
 
 Additive fractional toxicity model: ∑(dose ÷ max dose) ≤ 1.
 
-Conservative adult mg/kg maxima (plain solutions, lean body weight):
+Conservative adult mg/kg maxima (lean body weight):
 
-| Agent | mg/kg |
-| --- | --- |
-| Lignocaine | 4.5 |
-| Bupivacaine | 2.0 |
-| Ropivacaine | 3.0 |
-| Levobupivacaine | 2.0 |
+| Agent | Plain mg/kg | With adrenaline mg/kg |
+| --- | --- | --- |
+| Lignocaine | 4.5 | 7.0 |
+| Bupivacaine | 2.0 | 2.5 |
+| Ropivacaine | 3.0 | — |
+| Levobupivacaine | 2.0 | — |
+
+Lignocaine and bupivacaine doses can be logged as plain or with adrenaline. Each dose is scored against the limit for its own formulation, so mixed plain/adrenaline doses sum correctly in the fractional model. The headroom cards show remaining mg and mL for both plain and adrenaline-containing solutions.
 
 Safety cap defaults to 80% of theoretical maximum — this is a conscious tightening relative to package-insert maxima to absorb the multifactorial reductions Rosenberg et al describe (elderly, hepatic/cardiac dysfunction, acidosis, fascial-plane block kinetics, repeated dosing, concomitant IV lignocaine).
 
