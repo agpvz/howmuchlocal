@@ -439,6 +439,16 @@
     justify-content: space-between;
   }
   .drug-vols .vol-row .conc { color: var(--ink-faint); }
+  .drug-vols.adr .vol-row { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; }
+  .drug-vols.adr .vol-row > span:not(.conc) { text-align: right; min-width: 44px; }
+  .drug-vols .vol-head { color: var(--ink-faint); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; }
+  .drug-adr {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+    margin-top: 4px;
+  }
+  .drug-adr strong { color: var(--ink); font-weight: 600; }
 
   /* Cumulative meter */
   .cumulative {
@@ -770,6 +780,13 @@
           <div style="font-size:12px;color:var(--ink-faint);font-style:italic;font-family:Fraunces,serif;">Pick an agent first.</div>
         </div>
       </div>
+      <div id="adrRow" style="display:none;">
+        <div class="sub-label">Adrenaline</div>
+        <div class="chips" id="adrChips">
+          <button class="chip chip-small" data-adr="0">Plain</button>
+          <button class="chip chip-small" data-adr="1">With adrenaline</button>
+        </div>
+      </div>
       <div>
         <div class="sub-label">Volume</div>
         <div class="stepper">
@@ -831,8 +848,8 @@
   </div>
 
   <div class="footnote">
-    <p><strong>Method.</strong> Additive fractional toxicity ∑(dose ÷ max dose) ≤ 1, with a user-selectable safety cap (80% default, 90%, or the theoretical maximum). Conservative adult mg/kg limits (plain solutions, lean body weight): lignocaine 4.5, bupivacaine 2, ropivacaine 3, levobupivacaine 2.</p>
-    <p><strong>Caveats.</strong> <em>Reduce further in elderly, frail, hepatic/cardiac disease, pregnancy, acidosis, hypoalbuminaemia, fascial plane blocks with large volumes, repeated blocks, or concomitant IV lignocaine infusion. The fractional model is intentionally simplistic — bupivacaine is substantially more cardiotoxic per mg than lignocaine. Bedside aid only; not a substitute for clinical judgement.</em></p>
+    <p><strong>Method.</strong> Additive fractional toxicity ∑(dose ÷ max dose) ≤ 1, with a user-selectable safety cap (80% default, 90%, or the theoretical maximum). Conservative adult mg/kg limits (lean body weight), plain: lignocaine 4.5, bupivacaine 2, ropivacaine 3, levobupivacaine 2. With adrenaline (e.g. 1:200 000): lignocaine 7, bupivacaine 2.5. Each dose is scored against the limit for its own formulation, so plain and adrenaline-containing doses can be mixed.</p>
+    <p><strong>Caveats.</strong> <em>Reduce further in elderly, frail, hepatic/cardiac disease, pregnancy, acidosis, hypoalbuminaemia, fascial plane blocks with large volumes, repeated blocks, or concomitant IV lignocaine infusion. The higher adrenaline limits assume a deliberate vasoconstrictor-containing solution injected into a vascular-poor site — they do not apply to intravascular or highly vascular (e.g. intercostal, head &amp; neck mucosal) injection. The fractional model is intentionally simplistic — bupivacaine is substantially more cardiotoxic per mg than lignocaine. Bedside aid only; not a substitute for clinical judgement.</em></p>
 
     <p class="refs">
       <strong>References</strong><br>
@@ -906,6 +923,15 @@
     levobupivacaine: 2.0
   };
 
+  // Maximum mg/kg when the solution contains adrenaline (vasoconstrictor slows
+  // systemic absorption). Only agents where this changes the recommended limit.
+  const MAX_DOSE_ADR = {
+    lidocaine: 7.0,
+    bupivacaine: 2.5
+  };
+
+  const maxPerKg = (drug, adr) => (adr && MAX_DOSE_ADR[drug]) || MAX_DOSE[drug];
+
   const DISPLAY = {
     lidocaine: 'Lignocaine',
     bupivacaine: 'Bupivacaine',
@@ -935,6 +961,7 @@
     pendingDrug: null,
     pendingConc: null,
     pendingVol: 20,
+    pendingAdr: false,
     doses: [],
     safetyCap: 0.8
   };
@@ -953,14 +980,8 @@
 
   function totalFraction() {
     if (!state.weight) return 0;
-    const totals = {};
-    state.doses.forEach(d => { totals[d.drug] = (totals[d.drug]||0) + d.mg; });
-    let f = 0;
-    Object.keys(totals).forEach(drug => {
-      const maxMg = MAX_DOSE[drug] * state.weight;
-      f += totals[drug] / maxMg;
-    });
-    return f;
+    // Score each dose against the limit for its own formulation (plain vs adrenaline)
+    return state.doses.reduce((f, d) => f + d.mg / (maxPerKg(d.drug, d.adr) * state.weight), 0);
   }
 
   function statusLevel(frac) {
@@ -1016,6 +1037,11 @@
       c.classList.toggle('active', c.dataset.drug === state.pendingDrug);
     });
     renderConcChips();
+    const adrAvailable = !!(state.pendingDrug && MAX_DOSE_ADR[state.pendingDrug]);
+    $('adrRow').style.display = adrAvailable ? 'block' : 'none';
+    document.querySelectorAll('#adrChips .chip').forEach(c => {
+      c.classList.toggle('active', (c.dataset.adr === '1') === !!state.pendingAdr);
+    });
     $('volDisplay').textContent = state.pendingVol;
 
     const canAdd = state.pendingDrug && state.pendingConc && state.pendingVol > 0;
@@ -1030,7 +1056,7 @@
       el.innerHTML = '<div class="empty-given">No doses logged.</div>';
     } else {
       el.innerHTML = state.doses.map((d, i) =>
-        `<div class="dose-pill">${DISPLAY[d.drug]} · ${d.vol}mL ${d.conc}% · ${d.mg.toFixed(0)}mg <span class="x" data-i="${i}">×</span></div>`
+        `<div class="dose-pill">${DISPLAY[d.drug]} · ${d.vol}mL ${d.conc}%${d.adr ? ' + adr' : ''} · ${d.mg.toFixed(0)}mg <span class="x" data-i="${i}">×</span></div>`
       ).join('');
       el.querySelectorAll('.x').forEach(x => {
         x.addEventListener('click', e => {
@@ -1086,17 +1112,27 @@
       const maxMg = MAX_DOSE[drug] * state.weight;
       const remainingMg = remainingFraction * maxMg;
       const zero = remainingMg <= 0;
+      const hasAdr = !!MAX_DOSE_ADR[drug];
+      const remainingAdrMg = hasAdr ? remainingFraction * MAX_DOSE_ADR[drug] * state.weight : 0;
+      const fmtVol = (mg, c) => {
+        if (zero) return '—';
+        const mL = mg / concToMgMl(c);
+        return `${mL.toFixed(mL < 10 ? 1 : 0)} mL`;
+      };
       const concs = DISPLAY_CONCS[drug];
-      const volRows = concs.map(c => {
-        if (zero) return `<div class="vol-row"><span class="conc">${c}%</span><span>—</span></div>`;
-        const mL = remainingMg / concToMgMl(c);
-        return `<div class="vol-row"><span class="conc">${c}%</span><span>${mL.toFixed(mL < 10 ? 1 : 0)} mL</span></div>`;
-      }).join('');
+      const volRows = concs.map(c =>
+        `<div class="vol-row"><span class="conc">${c}%</span><span>${fmtVol(remainingMg, c)}</span>${hasAdr ? `<span>${fmtVol(remainingAdrMg, c)}</span>` : ''}</div>`
+      ).join('');
+      const volHead = hasAdr ? `<div class="vol-row vol-head"><span></span><span>plain</span><span>+adr</span></div>` : '';
+      const adrLine = hasAdr
+        ? `<div class="drug-adr">with adrenaline: <strong>${Math.max(0, remainingAdrMg).toFixed(0)} mg</strong></div>`
+        : '';
       return `
         <div class="drug-card ${zero?'zero':''}">
           <div class="drug-name">${DISPLAY[drug]}</div>
           <div class="drug-mg">${Math.max(0,remainingMg).toFixed(0)}<span class="unit">mg left</span></div>
-          <div class="drug-vols">${volRows}</div>
+          ${adrLine}
+          <div class="drug-vols${hasAdr ? ' adr' : ''}">${volHead}${volRows}</div>
         </div>
       `;
     }).join('');
@@ -1151,6 +1187,15 @@
       state.pendingDrug = drug;
       const defaults = { lidocaine: 1, bupivacaine: 0.5, ropivacaine: 0.5, levobupivacaine: 0.5 };
       state.pendingConc = defaults[drug];
+      state.pendingAdr = false;
+      save(); renderAddDose();
+    });
+  });
+
+  // Adrenaline toggle (for pending dose)
+  document.querySelectorAll('#adrChips .chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      state.pendingAdr = chip.dataset.adr === '1';
       save(); renderAddDose();
     });
   });
@@ -1192,12 +1237,14 @@
       drug: state.pendingDrug,
       vol: state.pendingVol,
       conc: state.pendingConc,
+      adr: !!(state.pendingAdr && MAX_DOSE_ADR[state.pendingDrug]),
       mg
     });
     // Reset pending for next entry
     state.pendingDrug = null;
     state.pendingConc = null;
     state.pendingVol = 20;
+    state.pendingAdr = false;
     save(); renderAll();
   });
 
@@ -1209,7 +1256,7 @@
     $('resetConfirm').classList.remove('open');
   });
   $('resetYes').addEventListener('click', () => {
-    state = { weight: null, pendingDrug: null, pendingConc: null, pendingVol: 20, doses: [], safetyCap: 0.8 };
+    state = { weight: null, pendingDrug: null, pendingConc: null, pendingVol: 20, pendingAdr: false, doses: [], safetyCap: 0.8 };
     save();
     $('resetConfirm').classList.remove('open');
     renderAll();
